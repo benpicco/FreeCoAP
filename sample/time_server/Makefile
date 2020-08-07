@@ -1,3 +1,6 @@
+ip6=y
+dtls=n
+
 ifeq ($(ip6),y)
 IP6_CFLAGS = -DCOAP_IP6
 endif

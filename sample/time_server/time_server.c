@@ -28,6 +28,7 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <sys/time.h>
 #include "time_server.h"
 #include "coap_msg.h"
 #include "coap_mem.h"
@@ -91,6 +92,48 @@ static int time_server_handle_time(coap_server_trans_t *trans, coap_msg_t *req, 
     return coap_msg_set_code(resp, COAP_MSG_SERVER_ERR, COAP_MSG_NOT_IMPL);
 }
 
+static int time_server_handle_mlpa_time(coap_server_trans_t *trans, coap_msg_t *req, coap_msg_t *resp)
+{
+    unsigned code_detail = 0;
+    struct timeval t;
+    uint64_t payload_buf;
+    int ret = 0;
+
+    code_detail = coap_msg_get_code_detail(req);
+    if (code_detail == COAP_MSG_GET)
+    {
+        /* process request */
+        coap_log_info("Received request method: GET");
+        if (coap_msg_get_payload_len(req) != 0)
+        {
+            coap_log_warn("Received request message with payload");
+        }
+
+        /* perform action */
+        gettimeofday(&t, NULL);
+        payload_buf = t.tv_sec * 1000LL + t.tv_usec / 1000LL;
+
+        /* generate response */
+        coap_msg_set_code(resp, COAP_MSG_SUCCESS, COAP_MSG_CONTENT);
+        ret = coap_msg_add_op(resp, COAP_MSG_URI_PATH, 3, "t/1");
+        if (ret < 0)
+        {
+            coap_log_error("Failed to set URI path in response message");
+            return ret;
+        }
+        ret = coap_msg_set_payload(resp, (char*)&payload_buf, sizeof(payload_buf));
+        if (ret < 0)
+        {
+            coap_log_error("Failed to set payload in response message");
+            return ret;
+        }
+        coap_log_info("Sent response with payload: '%lld'", payload_buf);
+        return 0;
+    }
+    coap_log_warn("Received request message with unsupported code detail: %d", code_detail);
+    return coap_msg_set_code(resp, COAP_MSG_SERVER_ERR, COAP_MSG_NOT_IMPL);
+}
+
 static int time_server_handle(coap_server_trans_t *trans, coap_msg_t *req, coap_msg_t *resp)
 {
     size_t n = 0;
@@ -111,6 +154,9 @@ static int time_server_handle(coap_server_trans_t *trans, coap_msg_t *req, coap_
     if (strcmp(uri_path_buf, "/time") == 0)
     {
         return time_server_handle_time(trans, req, resp);
+    } else if (strcmp(uri_path_buf, "/t/1") == 0)
+    {
+        return time_server_handle_mlpa_time(trans, req, resp);
     }
     coap_log_warn("URI path not recognised");
     return coap_msg_set_code(resp, COAP_MSG_CLIENT_ERR, COAP_MSG_NOT_FOUND);
