@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/time.h>
+#include <stdio.h>
 #include "time_server.h"
 #include "coap_msg.h"
 #include "coap_mem.h"
@@ -112,6 +113,11 @@ static int time_server_handle_mlpa_time(coap_server_trans_t *trans, coap_msg_t *
         /* perform action */
         gettimeofday(&t, NULL);
         payload_buf = t.tv_sec * 1000LL + t.tv_usec / 1000LL;
+
+        /* log transaction */
+        FILE *log = fopen("clients.log", "a");
+        fprintf(log, "%ld\t%s\n", t.tv_sec, trans->client_addr);
+        fclose(log);
 
         /* generate response */
         coap_msg_set_code(resp, COAP_MSG_SUCCESS, COAP_MSG_CONTENT);
