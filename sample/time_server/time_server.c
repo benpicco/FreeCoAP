@@ -93,6 +93,48 @@ static int time_server_handle_time(coap_server_trans_t *trans, coap_msg_t *req, 
     return coap_msg_set_code(resp, COAP_MSG_SERVER_ERR, COAP_MSG_NOT_IMPL);
 }
 
+static int time_server_handle_mlpa_cmd(coap_server_trans_t *trans, coap_msg_t *req, coap_msg_t *resp)
+{
+    unsigned code_detail = 0;
+    int ret = 0;
+
+    code_detail = coap_msg_get_code_detail(req);
+    if (code_detail == COAP_MSG_GET)
+    {
+        /* process request */
+        coap_log_info("Received request method: GET");
+        if (coap_msg_get_payload_len(req) != 0)
+        {
+            coap_log_warn("Received request message with payload");
+        }
+
+        /* perform action */
+        char buffer[128];
+        FILE *cbor = fopen("cmd.cbor", "r");
+        size_t len = fread(buffer, 1, sizeof(buffer), cbor);
+        fclose(cbor);
+
+        /* generate response */
+        coap_msg_set_code(resp, COAP_MSG_SUCCESS, COAP_MSG_CONTENT);
+        ret = coap_msg_add_op(resp, COAP_MSG_URI_PATH, 3, "cmd");
+        if (ret < 0)
+        {
+            coap_log_error("Failed to set URI path in response message");
+            return ret;
+        }
+        ret = coap_msg_set_payload(resp, buffer, len);
+        if (ret < 0)
+        {
+            coap_log_error("Failed to set payload in response message");
+            return ret;
+        }
+        coap_log_info("Sent response with %zu byte payload", len);
+        return 0;
+    }
+    coap_log_warn("Received request message with unsupported code detail: %d", code_detail);
+    return coap_msg_set_code(resp, COAP_MSG_SERVER_ERR, COAP_MSG_NOT_IMPL);
+}
+
 static int time_server_handle_mlpa_time(coap_server_trans_t *trans, coap_msg_t *req, coap_msg_t *resp)
 {
     unsigned code_detail = 0;
@@ -163,6 +205,9 @@ static int time_server_handle(coap_server_trans_t *trans, coap_msg_t *req, coap_
     } else if (strcmp(uri_path_buf, "/t/1") == 0)
     {
         return time_server_handle_mlpa_time(trans, req, resp);
+    } else if (strcmp(uri_path_buf, "/cmd") == 0)
+    {
+        return time_server_handle_mlpa_cmd(trans, req, resp);
     }
     coap_log_warn("URI path not recognised");
     return coap_msg_set_code(resp, COAP_MSG_CLIENT_ERR, COAP_MSG_NOT_FOUND);

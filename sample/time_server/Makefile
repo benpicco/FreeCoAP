@@ -79,8 +79,9 @@ OBJS += $(DTLS_OBJS)
 LIBS =
 PROG = time_server
 RM = /bin/rm -f
+CBOR = cmd.cbor
 
-$(PROG): $(OBJS)
+$(PROG): $(OBJS) $(CBOR)
 	$(LD_) $(LDFLAGS) $(OBJS) -o $@ $(LIBS)
 
 %.o: %.c $(INCS)
@@ -103,6 +104,9 @@ $(PROG): $(OBJS)
 
 %.o: $(K1)/%.c $(INCS)
 	$(CC_) $(CFLAGS) -c $<
+
+%.cbor: %.json
+	json2cbor.rb < $< > $@
 
 clean:
 	$(RM) $(PROG) $(OBJS)

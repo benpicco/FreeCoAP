@@ -1,0 +1,14 @@
+{
+    "seq": 123,
+    "cmd": [
+        { "echo" : "Hello from JSON" },
+        { "led"  : true },
+        { "delay": 1000 },
+        { "led"  : false },
+        { "delay": 1000 },
+        { "echo" : "Goodbye!" }
+    ],
+    "cfg": {
+        "timeout": 5
+    }
+}
